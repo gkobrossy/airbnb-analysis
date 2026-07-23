@@ -1,0 +1,198 @@
+---
+title: "AirBNB analysis"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(tigris)
+library(olsrr)
+library(modelr)
+
+library(osmdata)
+library(spatstat)
+library(ggspatial)
+library(mapview)
+
+
+```
+
+### Loading in Data and Saving
+
+```{r}
+#state_boundaries <- states(year = 2025)
+```
+
+```{r}
+# state_boundaries <- state_boundaries |> 
+#  filter(REGION != 9 & !(STUSPS %in% c("AK", "HI")))
+# us_coastline <- state_boundaries |> 
+#   st_union() |> 
+#   st_cast("MULTILINESTRING")
+
+```
+
+
+```{r}
+# bnb_data <- read_csv("data/train.csv") |> 
+#   select(-thumbnail_url)
+# 
+# bnb_sample <- bnb_data |> 
+#   slice_sample(n = 10000)
+```
+
+```{r}
+#save(state_boundaries, bnb_data, bnb_sample, us_coastline, file = "data/airbnb.RData")
+```
+
+### Exploratory Data Analysis
+
+```{r}
+load("data/airbnb.RData")
+bnb_sample_sf <- st_as_sf(bnb_sample, coords = c("longitude", "latitude"), crs = 4326)
+```
+
+```{r}
+bnb_sample_sf |> 
+  ggplot() +
+  geom_sf(data = state_boundaries) +
+  geom_sf()
+```
+
+```{r}
+us_coastline <- st_transform(us_coastline, 4326)
+bnb_sample_sf <- bnb_sample_sf |> 
+  mutate(price = exp(log_price),
+         host_year = year(host_since)) |> 
+  relocate(price, .before = log_price) |> 
+  mutate(
+    coast_distance = st_distance(geometry, us_coastline),
+    coast_distance_km = (as.numeric(coast_distance)/1000)
+    ) |> 
+  mutate(
+    clean_ammenities = str_replace_all(str_to_lower(amenities), "\"", "") |> 
+      str_remove_all("\\{|\\}"), 
+    ammenities_list = str_split(clean_ammenities, "\\s*,\\s*") |> 
+      map(function(x) str_trim(x)),
+    has_pool = map_lgl(ammenities_list, function(x) any(str_detect(x, "pools?")))
+    ) |> 
+  select(-clean_ammenities, -amenities)
+```
+
+## Models
+### Initial Model with City only
+
+```{r}
+lm_bnb_0 <- lm(log(price) ~ city, data = bnb_sample_sf) 
+summary(lm_bnb_0)
+```
+
+City already explains a large amount of variation in price
+
+
+### Model with Room type and Host 
+
+```{r}
+lm_bnb <- lm(log(price) ~ room_type + city + bedrooms + review_scores_rating, data = bnb_sample_sf) 
+summary(lm_bnb)
+```
+
+R-squared moves up to 0.5644.
+
+#### Adding an Interaction
+
+```{r}
+lm_bnb_2 <- lm(log(price) ~ room_type + city*log(coast_distance_km) + bedrooms + review_scores_rating, data = bnb_sample_sf) 
+```
+
+
+```{r}
+summary(lm_bnb_2)
+```
+
+
+```{r}
+plot(lm_bnb_2)
+```
+
+Chicago and DC have `coast_distance_km` that are too high. Including an interaction does not make sense here because the values of `coast_distance_km` do not overlap. 
+Cities without coastal offerings will be removed from the analysis
+
+
+#### Cities included in the final model
+
+```{r}
+bnb_sample_sf_coast <- bnb_sample_sf |> 
+   filter(city %in% c("Boston", "LA", "SF", "NYC"))
+```
+
+```{r}
+bnb_sample_sf |> 
+  ggplot(aes(x = coast_distance_km, y = log(price), color = city)) +
+  geom_point(alpha = 0.5) +
+  scale_color_viridis_d() +
+  geom_smooth(formula = y ~ x, method = "lm")
+```
+
+
+
+
+
+```{r}
+bnb_sample_sf_coast |> 
+  ggplot(aes(x = coast_distance_km, y = log(price), color = city)) +
+  geom_point(alpha = 0.3) +
+  scale_color_viridis_d() +
+  geom_smooth(formula = y ~ x, method = "lm", se = FALSE) +
+  labs(
+    x = "Distance to Coast (in km)",
+    title = "Scatterplot of log(price) vs Distance to Coast by City",
+    subtitle = "(for 8739 Listings)"
+  ) +
+  theme_gray()
+```
+```{r}
+bnb_sample_sf_coast |> 
+  ggplot(aes(x = coast_distance_km)) +
+  geom_histogram(aes(fill = city), bins = 40) +
+  scale_fill_viridis_d() +
+  labs(
+    title = "Histogram of Distance to Coast by City",
+    x = "Distance to Coast (in km)",
+    y = "Frequency",
+    subtitle = "(for 8739 Listings)"
+  ) + 
+  theme_bw()
+```
+
+
+
+## Initial Model with Coastal Cities Only
+
+```{r}
+lm_bnb_coast <- lm(log(price) ~ room_type + city * log(coast_distance_km) + bedrooms + review_scores_rating, data = bnb_sample_sf_coast) 
+```
+```{r}
+summary(lm_bnb_coast)
+```
+
+```{r}
+plot(lm_bnb_coast)
+```
+```{r}
+plot(~ log(price) + log(coast_distance_km) + bedrooms + review_scores_rating, data = bnb_sample_sf_coast)
+```
+
+```{r}
+lm_bnb_coast_2 <- lm(log(price) ~ room_type + city * log(coast_distance_km) + bedrooms + review_scores_rating + has_pool, data = bnb_sample_sf_coast) 
+```
+```{r}
+summary(lm_bnb_coast_2)
+```
+
+
+
+
+
