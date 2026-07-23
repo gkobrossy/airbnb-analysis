@@ -6,10 +6,6 @@ This project explores Airbnb listing data using R and Quarto. The goal is to inv
 
 ## Data
 
-## Data
-
-## Data
-
 The data used in this project come from the Kaggle dataset:
 
 [Airbnb Listings in Major US Cities - Deloitte ML](https://www.kaggle.com/datasets/rudymizrahi/airbnb-listings-in-major-us-cities-deloitte-ml)
