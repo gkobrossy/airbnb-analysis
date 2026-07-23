@@ -6,7 +6,18 @@ This project explores Airbnb listing data using R and Quarto. The goal is to inv
 
 ## Data
 
-The dataset was obtained from Kaggle. Raw data files are not included in this repository.
+## Data
+
+## Data
+
+The data used in this project come from the Kaggle dataset:
+
+[Airbnb Listings in Major US Cities - Deloitte ML](https://www.kaggle.com/datasets/rudymizrahi/airbnb-listings-in-major-us-cities-deloitte-ml)
+
+This project uses the `train.csv` file from the dataset. The original dataset was created for a machine learning competition, but this analysis uses the data for exploratory data analysis, regression modeling, and spatial analysis.
+The analysis uses a random sample from `train.csv`.
+
+The raw dataset is not included in this repository.
 
 ## Methods
 
