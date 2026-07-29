@@ -3,6 +3,7 @@
 ## Overview
 
 This project explores Airbnb listing data using R and Quarto. The goal is to investigate how patterns in listing characteristics and location predict price.
+This project is still ongoing, and this document will be continuously updated.
 
 ## Data
 
@@ -34,7 +35,7 @@ This analysis uses:
 - Quarto
 - tidyverse
 - sf
--osmdata
+- osmdata
 
 ## Reproducibility
 
