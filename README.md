@@ -6,6 +6,7 @@ This project explores Airbnb listing data using R and Quarto. The goal is to inv
 
 ## Data
 
+### Airbnb Data
 The data used in this project come from the Kaggle dataset:
 
 [Airbnb Listings in Major US Cities - Deloitte ML](https://www.kaggle.com/datasets/rudymizrahi/airbnb-listings-in-major-us-cities-deloitte-ml)
@@ -14,6 +15,9 @@ This project uses the `train.csv` file from the dataset. The original dataset wa
 The analysis uses a random sample from `train.csv`.
 
 The raw dataset is not included in this repository.
+
+### Map Data
+The location data, such as nearby entertainment, parks, public transit is obtained from the osmdata package.
 
 ## Methods
 
@@ -29,7 +33,8 @@ This analysis uses:
 - R
 - Quarto
 - tidyverse
-- ggplot2
+- sf
+-osmdata
 
 ## Reproducibility
 
