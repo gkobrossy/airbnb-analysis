@@ -15,6 +15,10 @@ library(osmdata)
 library(spatstat)
 library(ggspatial)
 library(mapview)
+chi_entertainment_data <- readRDS("data/chi_entertainment.rds")
+chi_culture_data <- readRDS("data/chi_culture.rds")
+chi_transport_data <- readRDS("data/chi_transport.rds")
+chi_park_data <- readRDS("data/chi_parks.rds")
 
 
 ```
@@ -49,7 +53,7 @@ library(mapview)
 ### Exploratory Data Analysis
 
 ```{r}
-load("data/airbnb.RData")
+load("data_private/airbnb.RData")
 bnb_sample_sf <- st_as_sf(bnb_sample, coords = c("longitude", "latitude"), crs = 4326)
 ```
 
@@ -184,3 +188,162 @@ lm_bnb_coast_2 <- lm(log(price) ~ room_type + city * log(coast_distance_km) + be
 ```{r}
 summary(lm_bnb_coast_2)
 ```
+
+### OSM Data
+
+```{r}
+chi_bnb <- bnb_sample_sf |> 
+  filter(city == "Chicago")
+chi_bbox <-st_bbox(chi_bnb) |> 
+  st_as_sfc()
+chi_bbox_buffered <- chi_bbox |> 
+  st_transform(26916) |>  #code for projection to meters in chicago 
+  st_buffer(dist = 5000) |> 
+  st_transform(4326)
+
+
+```
+
+```{r}
+ggplot() +
+  annotation_map_tile() + 
+  geom_sf(data = chi_bbox_buffered, alpha = 0.3) +
+  geom_sf(data = chi_bbox, alpha = 0.3) +
+  geom_sf(data = chi_bnb)
+```
+
+```{r}
+entertainment_types <- c("bar",
+                         "pub",
+                         "nightclub",
+                         "theatre",
+                         "cinema",
+                         "arts_centre"
+                         )
+
+culture_types <- c("museum",
+                  "gallery",
+                 "attraction",
+                  "hotel"
+                 )
+
+transport_types <- c("station", 
+                     "stop_position"
+                     )
+```
+
+#### Code to get data from OSM and save RDS files
+```{r}
+# entertainment_query <- opq(bbox = chi_bbox_buffered) |>
+#   add_osm_feature(
+#     key = "amenity",
+#     value = c(
+#       "bar",
+#       "pub",
+#       "nightclub",
+#       "theatre",
+#       "cinema",
+#       "arts_centre"
+#     )
+#   )
+# 
+# entertainment_data <- osmdata_sf(entertainment_query)
+```
+
+```{r}
+# culture_query <- opq(bbox = chi_bbox_buffered) |>
+#   add_osm_feature(
+#     key = "tourism",
+#     value = c(
+#       "museum",
+#       "gallery",
+#       "attraction",
+#       "viewpoint",
+#       "hotel"
+#     )
+#   )
+# 
+# culture_data <- osmdata_sf(culture_query)
+```
+
+```{r}
+# transport_query <- opq(bbox = chi_bbox_buffered) |>
+#   add_osm_feature(
+#     key = "public_transport",
+#     value = c("station", "stop_position")
+#   )
+# 
+# transport_data <- osmdata_sf(transport_query)
+```
+
+```{r}
+# saveRDS(entertainment_data, file = "data/chi_entertainment.rds")
+# saveRDS(culture_data, file = "data/chi_culture.rds")
+# saveRDS(transport_data, file = "data/chi_transport.rds")
+
+```
+
+#### Functions to clean OSM Data
+
+Note: There is currently a warning message for this function because `st_point_on_surface()` should get spatial data that is not in WGS84
+```{r}
+clean_osm_data <- function(osm_layer, tag_column, tags, source_type = c("point", "polygon", "multipolygon", "lines")){
+  if(is.null(osm_layer)){
+    return(NULL)
+  }
+  
+  source_type <- match.arg(source_type)
+  
+  cleaned_data <- osm_layer |> 
+      filter(.data[[tag_column]] %in% tags) |> 
+      st_point_on_surface() |> 
+      mutate(source = source_type) |> 
+      select(
+      any_of(c("osm_id", "name", "geometry", "source", tag_column)),
+      starts_with("addr:")
+    )
+  return(cleaned_data)
+}
+
+
+aggregate_osm_data <- function(osm_dataset, tag_column, tags){
+  
+  venue_points <- clean_osm_data(osm_dataset$osm_points, tag_column = tag_column, tags = tags, source_type = "point")
+  venue_poly <- clean_osm_data(osm_dataset$osm_polygons, tag_column = tag_column, tags = tags, source_type = "polygon")
+  venue_multipoly <- clean_osm_data(osm_dataset$osm_multipolygons, tag_column = tag_column, tags = tags, source_type = "multipolygon")
+  venue_lines <- clean_osm_data(osm_dataset$osm_lines, tag_column = tag_column, tags = tags, source_type = "lines")
+  city_venues <- bind_rows(
+    venue_points,
+    venue_poly,
+    venue_multipoly,
+    venue_lines
+  )
+  return(city_venues)
+ 
+}
+```
+```{r}
+chi_entertainment_clean <- aggregate_osm_data(chi_entertainment_data, "amenity", entertainment_types) 
+chi_culture_clean <- aggregate_osm_data(chi_culture_data, "tourism", culture_types) 
+chi_transport_clean <- aggregate_osm_data(chi_transport_data, "public_transport", transport_types) 
+```
+
+```{r}
+saveRDS(chi_entertainment_clean, "data/chi_entertainment_clean.rds")
+saveRDS(chi_culture_clean, "data/chi_culture_clean.rds")
+saveRDS(chi_transport_clean, "data/chi_transport_clean.rds")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
