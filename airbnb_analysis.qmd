@@ -276,42 +276,55 @@ transport_types <- c("station",
 # transport_data <- osmdata_sf(transport_query)
 ```
 
+
+```{r}
+# park_query <- opq(bbox = chi_bbox_buffered) |> 
+#    add_osm_feature(        key = "leisure",
+#        value = c("park")
+#     )
+# park_data <- osmdata_sf(park_query)
+```
+
 ```{r}
 # saveRDS(entertainment_data, file = "data/chi_entertainment.rds")
 # saveRDS(culture_data, file = "data/chi_culture.rds")
 # saveRDS(transport_data, file = "data/chi_transport.rds")
-
+# saveRDS(park_data, "data_private/chi_parks.rds")
 ```
 
-#### Functions to clean OSM Data
+### Cleaning Raw OSM data
 
-Note: There is currently a warning message for this function because `st_point_on_surface()` should get spatial data that is not in WGS84
 ```{r}
-clean_osm_data <- function(osm_layer, tag_column, tags, source_type = c("point", "polygon", "multipolygon", "lines")){
+clean_osm_data <- function(osm_layer, tag_column, tags, source_type = c("point", "polygon", "multipolygon", "lines"), crs = NULL){
   if(is.null(osm_layer)){
     return(NULL)
   }
   
   source_type <- match.arg(source_type)
   
+  if (!is.null(crs)){
+    osm_layer <- st_transform(osm_layer, crs = crs)
+  }
+  
   cleaned_data <- osm_layer |> 
       filter(.data[[tag_column]] %in% tags) |> 
       st_point_on_surface() |> 
       mutate(source = source_type) |> 
       select(
-      any_of(c("osm_id", "name", "geometry", "source", tag_column)),
+      any_of(c("osm_id", "name", "geometry", "source", tag_column, "bus", "subway", "train", "tram", "ferry", "railway")),
       starts_with("addr:")
     )
+
   return(cleaned_data)
 }
 
 
-aggregate_osm_data <- function(osm_dataset, tag_column, tags){
+aggregate_osm_data <- function(osm_dataset, tag_column, tags, crs = NULL){
   
-  venue_points <- clean_osm_data(osm_dataset$osm_points, tag_column = tag_column, tags = tags, source_type = "point")
-  venue_poly <- clean_osm_data(osm_dataset$osm_polygons, tag_column = tag_column, tags = tags, source_type = "polygon")
-  venue_multipoly <- clean_osm_data(osm_dataset$osm_multipolygons, tag_column = tag_column, tags = tags, source_type = "multipolygon")
-  venue_lines <- clean_osm_data(osm_dataset$osm_lines, tag_column = tag_column, tags = tags, source_type = "lines")
+  venue_points <- clean_osm_data(osm_dataset$osm_points, tag_column = tag_column, tags = tags, source_type = "point", crs = crs)
+  venue_poly <- clean_osm_data(osm_dataset$osm_polygons, tag_column = tag_column, tags = tags, source_type = "polygon", crs = crs)
+  venue_multipoly <- clean_osm_data(osm_dataset$osm_multipolygons, tag_column = tag_column, tags = tags, source_type = "multipolygon", crs = crs)
+  venue_lines <- clean_osm_data(osm_dataset$osm_lines, tag_column = tag_column, tags = tags, source_type = "lines", crs = crs)
   city_venues <- bind_rows(
     venue_points,
     venue_poly,
@@ -323,20 +336,51 @@ aggregate_osm_data <- function(osm_dataset, tag_column, tags){
 }
 ```
 ```{r}
-chi_entertainment_clean <- aggregate_osm_data(chi_entertainment_data, "amenity", entertainment_types) 
-chi_culture_clean <- aggregate_osm_data(chi_culture_data, "tourism", culture_types) 
-chi_transport_clean <- aggregate_osm_data(chi_transport_data, "public_transport", transport_types) 
+chi_entertainment_clean <- aggregate_osm_data(chi_entertainment_data, "amenity", entertainment_types, crs = 26916) 
+chi_culture_clean <- aggregate_osm_data(chi_culture_data, "tourism", culture_types, crs = 26916) 
+chi_transport_clean <- aggregate_osm_data(chi_transport_data, "public_transport", transport_types, crs = 26916) 
 ```
+
+#### Cleaned Data Plotted
+```{r}
+mapview(chi_entertainment_clean, col.regions = "red")+
+  mapview(chi_culture_clean, col.regions = "green")+
+  mapview(chi_transport_clean)
+```
+
+
+#### Saving Cleaned Data
 
 ```{r}
-saveRDS(chi_entertainment_clean, "data/chi_entertainment_clean.rds")
-saveRDS(chi_culture_clean, "data/chi_culture_clean.rds")
-saveRDS(chi_transport_clean, "data/chi_transport_clean.rds")
+# saveRDS(chi_entertainment_clean, "data/chi_entertainment_clean.rds")
+# saveRDS(chi_culture_clean, "data/chi_culture_clean.rds")
+# saveRDS(chi_transport_clean, "data/chi_transport_clean.rds")
 ```
 
 
 
 
+### Preparing OSM Data for KDE
+
+#### Weights for Transport Data
+
+
+```{r}
+transport_methods <- c("bus", "subway", "train", "tram", "ferry", "railway")
+```
+
+Manually inspecting the rows with missing `transport_methods` data
+```{r}
+chi_transport_clean |> 
+  st_drop_geometry() |> 
+  filter(
+    if_all(
+      any_of(transport_methods),
+      is.na
+    )
+  )
+
+```
 
 
 
