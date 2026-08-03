@@ -50,12 +50,12 @@ All spatial operations were performed using a projected coordinate reference sys
 
 The OSM data was processed before running the KDE. 
 
-| Feature Category | OSM Tags | Processing | Weighting |
+| Feature Category | OSM Tags | OSM Features| Processing | Weighting |
 |---|---|---|---|
-| Entertainment | `amenity` | Points, polygons, multipolygons, and lines converted to representative points | Equal weight |
-| Culture/Tourism | `tourism` | Points, polygons, multipolygons, and lines converted to representative points. Viewpoints removed | Equal weight |
-| Public Transportation | `public_transport` | Rail stations aggregated by station name. Bus, tram, and ferry stops retained as individual access points. | Mode-specific weights |
-| Parks | TBD | TBD | TBD |
+| Entertainment | `amenity` | TBD | Points, polygons, multipolygons, and lines converted to representative points | Equal weight |
+| Culture/Tourism | `tourism` | TBD |  Points, polygons, multipolygons, and lines converted to representative points. Viewpoints removed | Equal weight |
+| Public Transportation | `public_transport` | TBD|  Rail stations aggregated by station name. Bus, tram, and ferry stops retained as individual access points. | Mode-specific weights |
+| Parks | TBD | TBD | TBD | TBD| 
 
 ### OSM Data Processing Decisions
 
