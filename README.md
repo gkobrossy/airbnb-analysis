@@ -29,6 +29,11 @@ This analysis uses:
 - Data visualization
 - Statistical modeling
 
+Viewpoints were excluded because they do not consistently represent independent urban destinations relevant to neighborhood activity. In many cases, viewpoints corresponded to internal features within larger attractions (e.g., zoos or museums) or bridge overlooks, which would artificially increase local density estimates.
+
+### Limitations
+OpenStreetMap is a community-maintained dataset, and the same real-world feature may be represented differently across categories. For example, large transit stations may consist of multiple platforms and stop positions, while parks are stored as polygons rather than points. Preprocessing was therefore tailored to each feature type to ensure that the resulting spatial metrics better reflected the intended concept of urban activity.
+
 ## Tools
 
 - R
