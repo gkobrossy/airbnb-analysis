@@ -382,6 +382,84 @@ chi_transport_clean |>
 
 ```
 
+#### `prepare_kde_transport()` function
+
+```{r}
+
+prepare_kde_transport <- function(cleaned_transport_data, transport_methods){
+  rail_counts <- cleaned_transport_data |> 
+    filter(train == "yes" | subway == "yes") |> 
+    group_by(name) |> 
+    summarize(
+      count = n(),
+      geometry = st_point_on_surface(st_union(geometry)),
+      .groups = "drop"
+    ) |> 
+  select(name, count, geometry) |> 
+  mutate(
+    rail_weight = 2 + log1p(count),
+    bus_weight = 0,
+    tram_weight = 0,
+    ferry_weight = 0,
+    unknown_weight = 0
+    ) 
+
+  other_transport <- cleaned_transport_data |> 
+    filter(
+      bus == "yes" |
+      tram == "yes" |
+      ferry == "yes"
+    ) |> 
+    mutate(
+      rail_weight = 0,
+      bus_weight = if_else(bus == "yes", 1, 0, missing = 0),
+      tram_weight = if_else(tram == "yes", 1, 0, missing = 0),
+      ferry_weight = if_else(ferry == "yes", 1, 0, missing = 0),
+      unknown_weight = 0
+    ) |> 
+    select(name, geometry, ends_with("_weight"))
+
+  unknown_transport <- cleaned_transport_data|> 
+    filter(
+      if_all(
+        any_of(transport_methods),
+        is.na
+      )
+    ) |> 
+    select(name, geometry) |> 
+    mutate(
+      rail_weight = 0,
+      bus_weight = 0,
+      tram_weight = 0,
+      ferry_weight = 0,
+      unknown_weight = 1
+    ) 
+
+    if (
+      !all(
+        st_crs(rail_counts) == st_crs(other_transport),
+        st_crs(rail_counts) == st_crs(unknown_transport)
+        )
+      ) {
+        warning("CRS mismatch between transport datasets")
+      }
+
+  transport_kde <- bind_rows(
+    rail_counts,
+    other_transport,
+    unknown_transport
+  ) |> 
+  mutate(
+    total_weight = rail_weight +
+            bus_weight +
+            tram_weight +
+            ferry_weight +
+            unknown_weight
+  )
+  return(transport_kde)
+}
+
+```
 
 
 
