@@ -53,15 +53,9 @@ The OSM data was processed before running the KDE.
 
 | Feature Category | OSM Tags | OSM Features| Processing | Weighting |
 |---|---|---|---|---|
-| Entertainment | `amenity` |bar,
-                         pub,
-                         nightclub,
-                         theatre,
-                         cinema,
-                         arts_centre
-                         )| Points, polygons, multipolygons, and lines converted to representative points | Equal weight |
-| Culture/Tourism | `tourism` | TBD |  Points, polygons, multipolygons, and lines converted to representative points. Viewpoints removed | Equal weight |
-| Public Transportation | `public_transport` | TBD|  Rail stations aggregated by station name. Bus, tram, and ferry stops retained as individual access points. | Mode-specific weights |
+| Entertainment | `amenity` | `bar`, `pub`, `nightclub`, `theatre`, `cinema`, `arts_centre` | Points, polygons, multipolygons, and lines converted to representative points | Equal weight |
+| Culture/Tourism | `tourism` | `museum`, `gallery`, `attraction`, `hotel` |  Points, polygons, multipolygons, and lines converted to representative points. The OSM feature `viewpoint` was removed | Equal weight |
+| Public Transportation | `public_transport` |`station`, `stop_position`|  Rail stations aggregated by station name. Bus, tram, and ferry stops retained as individual access points. | Mode-specific weights |
 | Parks | TBD | TBD | TBD | TBD| 
 
 ### OSM Data Processing Decisions
