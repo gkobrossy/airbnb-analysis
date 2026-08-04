@@ -29,6 +29,7 @@ This analysis uses:
 - Data visualization
 - Statistical modeling
 - Spatial feature engineering using OpenStreetMap data
+- Kernel Density Estimates (KDE)
 
 ## Spatial Feature Engineering
 
@@ -52,7 +53,13 @@ The OSM data was processed before running the KDE.
 
 | Feature Category | OSM Tags | OSM Features| Processing | Weighting |
 |---|---|---|---|---|
-| Entertainment | `amenity` | TBD | Points, polygons, multipolygons, and lines converted to representative points | Equal weight |
+| Entertainment | `amenity` |bar,
+                         pub,
+                         nightclub,
+                         theatre,
+                         cinema,
+                         arts_centre
+                         )| Points, polygons, multipolygons, and lines converted to representative points | Equal weight |
 | Culture/Tourism | `tourism` | TBD |  Points, polygons, multipolygons, and lines converted to representative points. Viewpoints removed | Equal weight |
 | Public Transportation | `public_transport` | TBD|  Rail stations aggregated by station name. Bus, tram, and ferry stops retained as individual access points. | Mode-specific weights |
 | Parks | TBD | TBD | TBD | TBD| 
