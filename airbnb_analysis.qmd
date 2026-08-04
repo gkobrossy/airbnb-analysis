@@ -10,7 +10,7 @@ library(sf)
 library(tigris)
 library(olsrr)
 library(modelr)
-
+library(car)
 library(osmdata)
 library(spatstat)
 library(ggspatial)
@@ -497,7 +497,13 @@ plot(pp_entertainment)
 **Note:** Added the `st_filter()` command because some points were outside the ppp. This needs to be investigated, but it is likely because of st_transform or osm data bringing polygons that are beyond the border. 
 
 ```{r}
-sigma = 250 #500 meters based on the existing crs = 26916
+bw.ppl(pp_entertainment)
+```
+
+Likelihood Cross-Validation (`spatstat::bw.ppl`) identified an optimal bandwidth scale near 926m. For model simplicity and interpretability, $\sigma = 1,000\text{m}  (1 \text{km})$ was selected, representing a standard 10-to-12 minute walk for pedestrians."
+
+```{r}
+sigma = 1000 #1000 meters based on the existing crs = 26916
 kde_entertainment <- density.ppp(
   pp_entertainment,
   sigma = sigma
@@ -508,18 +514,7 @@ kde_entertainment <- density.ppp(
 plot(kde_entertainment)
 ```
 
-```{r}
-kde_entertainment |> 
-  rast() |> 
-  as.data.frame(xy = TRUE) |> 
-  rename("density" = "lyr.1") |>
-#  filter(density > 6e-5) |> 
-  ggplot() +
-  geom_raster(aes(x = x, y = y, fill = density))+
-  scale_fill_viridis_c(option = "magma") +
-  annotation_map_tile(alpha = 0.3)+
-  coord_sf(crs = 26916)
-```
+
 ```{r}
 raster <- kde_entertainment |> 
   rast() 
@@ -533,5 +528,57 @@ raster <- kde_entertainment |>
   coord_sf(crs = 26916) 
 
 ```
+```{r}
+#Display KDE
+kde_plot <- raster
+kde_plot[kde_plot < 1e-6] <- NA  # Make zero-density transparent
 
+ggplot() +
+  geom_spatraster(data = kde_plot*100000, alpha = 0.75) +
+  scale_fill_viridis_c(
+    begin = 0.2,
+    option = "magma", 
+    na.value = "transparent",
+    name = "Venue Density\n(Index x 10^5)"
+  ) +
+  labs(
+    title = "Chicago Entertainment Venue Density",
+    subtitle = "Kernel Density Estimation (σ = 1000m) used in Pricing Model",
+    x = "Longitude", y = "Latitude"
+  ) +
+  annotation_map_tile(alpha = 0.3)+
+  coord_sf(crs = 26916)+
+  theme_minimal()
+```
+```{r}
+chi_model <- lm(log(price) ~ room_type + bedrooms + review_scores_rating + has_pool, data = chi_bnb_data) 
+```
+```{r}
+summary(chi_model)
+```
+
+```{r}
+extracted_values<- extract(raster, chi_bnb_data)
+chi_bnb_data$kde_value <- extracted_values[,2]
+```
+
+
+```{r}
+chi_model_2 <- lm(log(price) ~ room_type + accommodates + bathrooms + bedrooms+ review_scores_rating+ has_pool + kde_value, data = chi_bnb_data) 
+```
+
+
+
+
+```{r}
+chi_model_2 |> summary()
+plot(chi_model_2, which = 1, add.smooth = F, id.n = 0 )
+plot(chi_model_2, which = 2, id.n = 0)
+```
+```{r}
+chi_model_2 |> 
+ vif()
+```
+
+The variable `has_pool` is no longer significant when using `kde_value`. This could be because Airbnbs with pools were already in neighborhoods closer to downtown, and the KDE can explain this variation. 
 
