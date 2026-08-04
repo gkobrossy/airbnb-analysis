@@ -15,6 +15,8 @@ library(osmdata)
 library(spatstat)
 library(ggspatial)
 library(mapview)
+library(terra)
+library(tidyterra)
 chi_entertainment_data <- readRDS("data/chi_entertainment.rds")
 chi_culture_data <- readRDS("data/chi_culture.rds")
 chi_transport_data <- readRDS("data/chi_transport.rds")
@@ -461,11 +463,75 @@ prepare_kde_transport <- function(cleaned_transport_data, transport_methods){
 
 ```
 
+```{r}
+chi_kde_transport_table <- prepare_kde_transport(chi_transport_clean, transport_methods)
+```
+
+### KDE for `chi_entertainment_clean`
+
+```{r}
+chi_entertainment_clean |> glimpse()
+```
+```{r}
+window <- chi_bbox_buffered |> 
+  st_transform(crs = 26916) |> 
+  as.owin()
+```
+```{r}
+coords <- chi_entertainment_clean |> 
+  st_filter(st_transform(chi_bbox_buffered, 26916)) |> 
+  st_coordinates()
+
+pp_entertainment <- ppp(
+  x = coords[,1],
+  y = coords[,2],
+  window = window
+)
+```
+```{r}
+plot(pp_entertainment)
+```
 
 
 
+**Note:** Added the `st_filter()` command because some points were outside the ppp. This needs to be investigated, but it is likely because of st_transform or osm data bringing polygons that are beyond the border. 
 
+```{r}
+sigma = 250 #500 meters based on the existing crs = 26916
+kde_entertainment <- density.ppp(
+  pp_entertainment,
+  sigma = sigma
+)
+```
 
+```{r}
+plot(kde_entertainment)
+```
 
+```{r}
+kde_entertainment |> 
+  rast() |> 
+  as.data.frame(xy = TRUE) |> 
+  rename("density" = "lyr.1") |>
+#  filter(density > 6e-5) |> 
+  ggplot() +
+  geom_raster(aes(x = x, y = y, fill = density))+
+  scale_fill_viridis_c(option = "magma") +
+  annotation_map_tile(alpha = 0.3)+
+  coord_sf(crs = 26916)
+```
+```{r}
+raster <- kde_entertainment |> 
+  rast() 
+  ggplot(data = raster) +
+    geom_sf(data = chi_entertainment_clean, alpha = 1) +
+  geom_spatraster(data = raster, alpha = 0.5) + 
+ 
+  scale_fill_viridis_c(option = "magma") +
+  annotation_map_tile(alpha = 0.3)+
+    
+  coord_sf(crs = 26916) 
+
+```
 
 
