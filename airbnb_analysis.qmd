@@ -551,6 +551,11 @@ ggplot() +
   theme_minimal()
 ```
 ```{r}
+chi_bnb_data <- bnb_sample_sf |> 
+  filter(city == "Chicago") |> 
+  st_transform(26916) 
+```
+```{r}
 chi_model <- lm(log(price) ~ room_type + bedrooms + review_scores_rating + has_pool, data = chi_bnb_data) 
 ```
 ```{r}
@@ -582,3 +587,11 @@ chi_model_2 |>
 
 The variable `has_pool` is no longer significant when using `kde_value`. This could be because Airbnbs with pools were already in neighborhoods closer to downtown, and the KDE can explain this variation. 
 
+```{r}
+chi_model_3 <- lm(log(price) ~ room_type + accommodates + bathrooms + bedrooms+ review_scores_rating+ has_pool + kde_value + neighbourhood, data = chi_bnb_data) 
+```
+```{r}
+summary(chi_model_3)
+```
+
+While introducing neighborhood dummies increased the multiple $R^2$ from 0.608 to 0.677, the Adjusted $R^2$ did not change by much (0.601 to 0.613) while adding all of the neighborhoods. Moreover, multiple sparse neighborhoods yielded observations with leverage = 1, signaling overfitting, and nearly 20% of the observations have been deleted due to missing data. Lastly, the `neighbourhood` predictor is specific to Chicago, whereas `kde_value` can be computed for any city. Therefore, the KDE model will be used. 
