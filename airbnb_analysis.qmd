@@ -469,9 +469,7 @@ chi_kde_transport_table <- prepare_kde_transport(chi_transport_clean, transport_
 
 ### KDE for `chi_entertainment_clean`
 
-```{r}
-chi_entertainment_clean |> glimpse()
-```
+
 ```{r}
 window <- chi_bbox_buffered |> 
   st_transform(crs = 26916) |> 
@@ -550,6 +548,8 @@ ggplot() +
   coord_sf(crs = 26916)+
   theme_minimal()
 ```
+### Comparing Models with KDE, Neighborhood
+
 ```{r}
 chi_bnb_data <- bnb_sample_sf |> 
   filter(city == "Chicago") |> 
