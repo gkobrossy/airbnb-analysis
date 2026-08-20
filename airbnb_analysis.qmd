@@ -498,7 +498,7 @@ plot(pp_entertainment)
 bw.ppl(pp_entertainment)
 ```
 
-Likelihood Cross-Validation (`spatstat::bw.ppl`) identified an optimal bandwidth scale near 926m. For model simplicity and interpretability, $\sigma = 1,000\text{m}  (1 \text{km})$ was selected, representing a standard 10-to-12 minute walk for pedestrians."
+Likelihood Cross-Validation (`spatstat::bw.ppl()`) identified an optimal bandwidth scale near 926m. For model simplicity and interpretability, $\sigma = 1,000\text{m}  (1 \text{km})$ was selected, representing a standard 10-to-12 minute walk for pedestrians."
 
 ```{r}
 sigma = 1000 #1000 meters based on the existing crs = 26916
@@ -514,7 +514,7 @@ plot(kde_entertainment)
 
 
 ```{r}
-raster <- kde_entertainment |> 
+chi_entertainment_raster <- kde_entertainment |> 
   rast() 
   ggplot(data = raster) +
     geom_sf(data = chi_entertainment_clean, alpha = 1) +
@@ -527,8 +527,18 @@ raster <- kde_entertainment |>
 
 ```
 ```{r}
+chi_mean_val <- global(chi_entertainment_raster, "mean", na.rm = TRUE)$mean
+chi_sd_val <- global(chi_entertainment_raster, "sd", na.rm = TRUE)$sd
+
+chi_entertainment_raster_z <- (chi_entertainment_raster - chi_mean_val)/chi_sd_val
+
+```
+
+
+
+```{r}
 #Display KDE
-kde_plot <- raster
+kde_plot <- chi_entertainment_raster
 kde_plot[kde_plot < 1e-6] <- NA  # Make zero-density transparent
 
 ggplot() +
@@ -547,7 +557,65 @@ ggplot() +
   annotation_map_tile(alpha = 0.3)+
   coord_sf(crs = 26916)+
   theme_minimal()
+
 ```
+
+### Standardizing KDE
+
+```{r}
+chi_entertainment_raster_z |> 
+  as.data.frame(xy = TRUE) |> 
+  ggplot(aes(x = lyr.1)) +
+  geom_histogram(bins = 20, color = "black", fill = "lightblue")
+```
+
+### Log-transforming KDE and then standardizing due to the skew
+
+```{r}
+chi_entertainment_raster_log <- log(chi_entertainment_raster+ 1e-6)
+
+
+chi_mean_val_log <- global(chi_entertainment_raster_log, "mean", na.rm = TRUE)$mean
+chi_sd_val_log <- global(chi_entertainment_raster_log, "sd", na.rm = TRUE)$sd
+
+chi_entertainment_raster_z_log <- (chi_entertainment_raster_log - chi_mean_val_log)/chi_sd_val_log
+```
+```{r}
+chi_entertainment_raster_z_log |> 
+  as.data.frame(xy = TRUE) |> 
+  ggplot(aes(x = lyr.1)) +
+  geom_histogram(bins = 20, color = "black", fill = "lightblue")
+```
+
+
+
+```{r}
+#Display standardized KDE
+kde_plot_z_log <- chi_entertainment_raster_z_log %>%
+  ifel(test = . < 0, NA, no = .)
+#kde_plot[kde_plot < 1e-6] <- NA  # Make zero-density transparent
+
+ggplot() +
+  geom_spatraster(data = kde_plot_z_log, alpha = 0.75) +
+  scale_fill_viridis_c(
+    begin = 0.2,
+    option = "magma", 
+    na.value = "transparent",
+    name = "Relative Venue Density"
+  ) +
+  labs(
+    title = "Chicago Entertainment Venue Density",
+    subtitle = "Log-transformed Standardized Kernel Density Estimation (σ = 1000m)",
+    x = "Longitude", 
+    y = "Latitude"
+  ) +
+  annotation_map_tile(alpha = 0.4)+
+  coord_sf(crs = 26916)+
+  theme_minimal()
+
+```
+
+
 ### Comparing Models with KDE, Neighborhood
 
 ```{r}
@@ -563,13 +631,16 @@ summary(chi_model)
 ```
 
 ```{r}
-extracted_values<- extract(raster, chi_bnb_data)
+extracted_values<- extract(chi_entertainment_raster, chi_bnb_data)
 chi_bnb_data$kde_value <- extracted_values[,2]
+
+extracted_values_log <- extract(chi_entertainment_raster_z_log, chi_bnb_data)
+chi_bnb_data$kde_value_log_z <- extracted_values_log[,2]
 ```
 
 
 ```{r}
-chi_model_2 <- lm(log(price) ~ room_type + accommodates + bathrooms + bedrooms+ review_scores_rating+ has_pool + kde_value, data = chi_bnb_data) 
+chi_model_2 <- lm(log(price) ~ room_type + accommodates + bathrooms + bedrooms+ review_scores_rating + has_pool + kde_value, data = chi_bnb_data) 
 ```
 
 
@@ -588,10 +659,36 @@ chi_model_2 |>
 The variable `has_pool` is no longer significant when using `kde_value`. This could be because Airbnbs with pools were already in neighborhoods closer to downtown, and the KDE can explain this variation. 
 
 ```{r}
-chi_model_3 <- lm(log(price) ~ room_type + accommodates + bathrooms + bedrooms+ review_scores_rating+ has_pool + kde_value + neighbourhood, data = chi_bnb_data) 
+chi_bnb_data |> 
+  ggplot(aes(x = has_pool, y = kde_value)) +
+  geom_boxplot() + 
+  labs(
+    title = "Kernel Density Estimate (KDE) by Pool Amenity",
+    subtitle = "(for 511 Airbnb observations in Chicago)",
+    x = "Has Pool?",
+    y = "KDE Value"
+  ) +
+  theme_bw() 
+```
+
+```{r}
+chi_model_3 <- lm(log(price) ~ room_type + accommodates + bathrooms + bedrooms+ review_scores_rating + has_pool + kde_value_log_z, data = chi_bnb_data) 
 ```
 ```{r}
 summary(chi_model_3)
+plot(chi_model_3, which = 1, add.smooth = F, id.n = 0 )
+plot(chi_model_3, which = 2, id.n = 0)
+chi_model_3 |> 
+  vif()
+```
+All adjusted GVIF values are reasonable, and less than the equivalent VIF = 5 threshold. There is some multicollinarity, but it is not severe.
+
+
+```{r}
+chi_model_4 <- lm(log(price) ~ room_type + accommodates + bathrooms + bedrooms+ review_scores_rating+ has_pool + kde_value + neighbourhood, data = chi_bnb_data) 
+```
+```{r}
+summary(chi_model_4)
 ```
 
 While introducing the indicator variable `neighbourhood` increased the multiple $R^2$ from 0.608 to 0.677, the Adjusted $R^2$ did not change by much (0.601 to 0.613) while adding all of the neighborhoods. Moreover, multiple sparse neighborhoods yielded observations with leverage = 1, signaling overfitting, and nearly 20% of the observations have been deleted due to missing data. Lastly, the `neighbourhood` predictor is specific to Chicago, whereas `kde_value` can be computed for any city. Therefore, the KDE model will be used. 
