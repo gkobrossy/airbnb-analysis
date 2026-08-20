@@ -516,9 +516,9 @@ plot(kde_entertainment)
 ```{r}
 chi_entertainment_raster <- kde_entertainment |> 
   rast() 
-  ggplot(data = raster) +
+  ggplot(data = chi_entertainment_raster) +
     geom_sf(data = chi_entertainment_clean, alpha = 1) +
-  geom_spatraster(data = raster, alpha = 0.5) + 
+  geom_spatraster(data = chi_entertainment_raster, alpha = 0.5) + 
  
   scale_fill_viridis_c(option = "magma") +
   annotation_map_tile(alpha = 0.3)+
