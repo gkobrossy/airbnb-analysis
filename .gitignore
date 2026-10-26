@@ -6,7 +6,8 @@ rosm.cache/
 .DS_Store
 data_private/
 airbnb_work_in_progress.qmd
-data/
+data copy/
 README.html
 decision_log.html
 airbnb_analysis_files/
+airbnb_analysis.html
