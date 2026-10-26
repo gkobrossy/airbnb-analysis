@@ -41,13 +41,6 @@ features were processed individually before kernel density estimation (KDE).
 
 All spatial operations were performed using a projected coordinate reference system to allow distance-based calculations in meters.
 
-| City | EPSG |
-|---|---|
-|Chicago|26916|
-|Boston| TBD|
-|LA| TBD|
-|SF| TBD|
-|DC| TBD|
 
 ### OSM Feature Processing
 
@@ -88,17 +81,22 @@ while parks are stored as polygons rather than points.
 Preprocessing was therefore tailored to each feature type to ensure that the resulting spatial 
 metrics better reflected the intended concept of urban activity.
 
-## Tools
+## Packages
 
-- R
-- Quarto
 - tidyverse
 - sf
 - osmdata
 - spatstat
+- terra
+- tidyterra
 
 ## Reproducibility
 
-The analysis can be reproduced by obtaining the dataset and running:
+The analysis can be reproduced by obtaining the dataset and running, in the following order:
 
-`airbnb_analysis.qmd`
+- `01_load_data.R`
+- `02_clean_and_prepare.R`
+- `airbnb_analysis.qmd`
+Note: `00_osm_queries.R` uses the `osmdata` package to download all of the spatial amenity data in each city. 
+The queries may fail because of the large amount of data requested, so the results from `00_osm_queries.R` are saved in the data folder.
+Therefore, it is recommended to start with `01_load_data.R`
