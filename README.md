@@ -2,9 +2,9 @@
 
 ## Overview
 
-**Status: Work-in-progress. This document will be continuously updated**
+**Status: Work-in-progress. This document will be continuously updated.**
 
-This project explores Airbnb listing data using R and Quarto. The goal is to investigate how patterns in listing characteristics and location predict price.
+This project explores Airbnb listing data using R and Quarto. The goal is to investigate how patterns in listing characteristics and location predict price. Specifically, this project uses `osmdata` to explore how city amenities predict listing price.
 
 ## Data
 
