@@ -4,8 +4,15 @@
 
 **Status: Work-in-progress. This document will be continuously updated.**
 
-This project explores Airbnb listing data using R and Quarto. The goal is to investigate how patterns in listing characteristics and location predict price. Specifically, this project uses `osmdata` to explore how city amenities predict listing price.
+This project explores Airbnb listing data using R and Quarto. 
 
+The goal is to investigate how patterns in listing characteristics and location predict price.
+
+Specifically, this project explores the spatial determinants of Airbnb listing prices using a two-part analytical approach:
+- **Macro Analysis:** A multi-city regression examining coastline distance interactions across major U.S. coastal metros (Boston, NYC, LA, SF).
+- **Micro Analysis:** High-resolution spatial feature engineering in Chicago using OpenStreetMap (OSM) data and Kernel Density Estimation (KDE) to measure local pedestrian and transportation accessibility.
+
+---
 ## Data
 
 ### Airbnb Data
@@ -51,6 +58,8 @@ The OSM data was processed before running the KDE.
 | Culture/Tourism | `tourism` | `museum`, `gallery`, `attraction`, `hotel` |  Points, polygons, multipolygons, and lines converted to representative points. The OSM feature `viewpoint` was removed | Equal weight |
 | Public Transportation | `public_transport` |`station`, `stop_position`|  Rail stations aggregated by station name. Bus, tram, and ferry stops retained as individual access points. | Mode-specific weights |
 | Parks | TBD | TBD | TBD | TBD| 
+
+These OSM features are specified in `config.R` and are used for all scripts in this analysis.
 
 ### OSM Data Processing Decisions
 

@@ -1,6 +1,6 @@
 ---
 title: "AirBNB analysis"
-format: html
+format: pdf
 editor: visual
 ---
 
@@ -30,6 +30,15 @@ chi_kde_transport_table <- readRDS("data/chi_weighted_transport.rds")
 
 ```
 
+
+## Research Design
+
+This study investigates the determinants of Airbnb listing prices across two distinct spatial scales:
+
+1. **Macro-Level Analysis (Multi-City Coastal Dynamics):** Evaluates how proximity to the U.S. coastline (`coast_distance_km`) influences pricing across major coastal metropolitan areas (**Boston, New York City, Los Angeles, and San Francisco**), exploring interaction effects between market identity and coastal access.
+2. **Micro-Level Spatial Feature Engineering (Chicago Deep Dive):** Zooms into a single urban ecosystem (**Chicago, IL**) to build a spatial pipeline. Using OpenStreetMap (OSM) data, custom transit weighting schema, and log-standardized Kernel Density Estimation (KDE), this section tests whether continuous pedestrian density metrics outperform categorical neighborhood variables.
+
+## Macro-level Analysis (Multi-City Coastal Dynamics)
 ### Exploratory Data Analysis
 
 
@@ -90,7 +99,12 @@ bnb_sample_sf |>
   ggplot(aes(x = coast_distance_km, y = log(price), color = city)) +
   geom_point(alpha = 0.5) +
   scale_color_viridis_d() +
-  geom_smooth(formula = y ~ x, method = "lm")
+  geom_smooth(formula = y ~ x, method = "lm") +
+  labs(
+    title = "Log(Price) of Airbnb listings by City",
+    x = "Distance to Coast (km)",
+    y = "Log(Price)"
+  )
 ```
 DC and Boston have `coast_distance_km` values that are different from the other cities. 
 
@@ -147,6 +161,10 @@ lm_bnb_coast_2 <- lm(log(price) ~ room_type + city * log(coast_distance_km) + be
 ```{r}
 summary(lm_bnb_coast_2)
 ```
+
+Examining macro-level coastal interactions revealed some problems, resulting in the exclusion of inland cities like Chicago and DC from waterfront distance models. This highlighted the need for a localized, city-wide, micro-scale approach. To capture neighborhood dynamics without being constrained by the coastal distance issues, the analysis shifts to Chicago, IL, leveraging OpenStreetMap (OSM) to engineer continuous Kernel Density Estimation (KDE) metrics.
+
+## Micro-level Spatial Feature Engineering (Chicago, IL)
 
 ### OSM Data
 
@@ -249,26 +267,26 @@ window <- chi_bbox_buffered |>
   as.owin()
 ```
 ```{r}
-coords <- chi_entertainment_clean |> 
+coords <- chi_kde_transport_table |> 
   st_filter(st_transform(chi_bbox_buffered, 26916)) |> 
   st_coordinates()
 
-pp_entertainment <- ppp(
+pp_transport <- ppp(
   x = coords[,1],
   y = coords[,2],
   window = window
 )
 ```
 ```{r}
-plot(pp_entertainment)
+plot(pp_transport)
 ```
 **Note:** Added the `st_filter()` command because some points were outside the ppp. This needs to be investigated, but it is likely because of st_transform or osm data bringing polygons that are beyond the border. 
 
 ```{r}
-bw.ppl(pp_entertainment)
+bw.ppl(pp_culture)
 ```
 
-Likelihood Cross-Validation (`spatstat::bw.ppl()`) identified an optimal bandwidth scale near 926m. For model simplicity and interpretability, $\sigma = 1,000\text{m}  (1 \text{km})$ was selected, representing a standard 10-to-12 minute walk for pedestrians."
+Likelihood Cross-Validation (`spatstat::bw.ppl()`) identified an optimal bandwidth scale near 733m. For model simplicity and interpretability, $\sigma = 1,000\text{m}  (1 \text{km})$ was selected, representing a standard 10-to-12 minute walk for pedestrians."
 
 A fixed bandwidth of 1,000 m was used to estimate entertainment activity density. This scale was chosen to capture neighborhood-level patterns rather than highly localized concentrations of individual establishments.
 
